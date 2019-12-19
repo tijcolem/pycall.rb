@@ -37,9 +37,6 @@ module PyCall
         end
 
         def find_libpython(python = nil)
-          debug_report("find_libpython(#{python.inspect})")
-          python, python_config = find_python_config(python)
-
           # Try LIBPYTHON environment variable first.
           if (libpython = ENV['LIBPYTHON'])
             if File.file?(libpython)
@@ -53,6 +50,9 @@ module PyCall
             end
             warn "WARNING(#{self}.#{__method__}) Ignore the wrong libpython location specified in ENV['LIBPYTHON']."
           end
+
+          debug_report("find_libpython(#{python.inspect})")
+          python, python_config = find_python_config(python)
 
           # Find libpython (we hope):
           set_PYTHONHOME(python_config)
