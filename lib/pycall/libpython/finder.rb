@@ -20,8 +20,8 @@ module PyCall
 
       class << self
         DEFAULT_PYTHON = [
-          -'python3',
           -'python',
+          -'python3',
         ].freeze
 
         def find_python_config(python = nil)
@@ -37,6 +37,13 @@ module PyCall
         end
 
         def find_libpython(python = nil)
+          debug_report("find_libpython(#{python.inspect})")
+          python, python_config = find_python_config(python)
+
+          set_PYTHONHOME(python_config)
+          libs = make_libs(python_config)
+          libpaths = make_libpaths(python_config)
+
           # Try LIBPYTHON environment variable first.
           if (libpython = ENV['LIBPYTHON'])
             if File.file?(libpython)
@@ -50,13 +57,6 @@ module PyCall
             end
             warn "WARNING(#{self}.#{__method__}) Ignore the wrong libpython location specified in ENV['LIBPYTHON']."
           end
-
-          debug_report("find_libpython(#{python.inspect})")
-          python, python_config = find_python_config(python)
-
-          set_PYTHONHOME(python_config)
-          libs = make_libs(python_config)
-          libpaths = make_libpaths(python_config)
 
           # Find libpython (we hope):
           multiarch = python_config[:MULTIARCH] || python_config[:multiarch]
@@ -97,9 +97,25 @@ module PyCall
         end
 
         def investigate_python_config(python)
+investigator_prgm = <<-HERE
+from distutils.sysconfig import get_config_var
+import sys
+
+def conda():
+    return 'conda' in sys.version or 'Continuum' in sys.version
+
+for var in ('executable', 'exec_prefix', 'prefix'):
+  print(var + ': ' + str(getattr(sys, var)))
+print('conda: ' + ('true' if conda() else 'false'))
+print('multiarch: ' + str(getattr(getattr(sys, 'implementation', sys), '_multiarch', None)))
+for var in ('VERSION', 'INSTSONAME', 'LIBRARY', 'LDLIBRARY', 'LIBDIR', 'PYTHONFRAMEWORKPREFIX', 'MULTIARCH'):
+  print(var + ': ' + str(get_config_var(var)))
+HERE
+
           python_env = { 'PYTHONIOENCODING' => 'UTF-8' }
           debug_report("investigate_python_config(#{python.inspect})")
-          IO.popen(python_env, [python, python_investigator_py], 'r') do |io|
+          #IO.popen(python_env, [python, python_investigator_py], 'r') do |io|
+          IO.popen(python_env, [python, '-c', investigator_prgm], 'r') do |io|
             {}.tap do |config|
               io.each_line do |line|
                 next unless line =~ /: /
