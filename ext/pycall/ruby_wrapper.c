@@ -359,9 +359,6 @@ VALUE cPyRubyPtr;
 const rb_data_type_t pycall_pyrubyptr_data_type = {
   "PyCall::PyRubyPtr",
   { 0, pycall_pyptr_free, pycall_pyptr_memsize, },
-#ifdef RUBY_TYPED_FREE_IMMEDIATELY
-  &pycall_pyptr_data_type, 0, RUBY_TYPED_FREE_IMMEDIATELY
-#endif
 };
 
 static inline int
